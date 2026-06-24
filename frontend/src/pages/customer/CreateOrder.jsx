@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import LocationPicker from '../../components/customer/LocationPicker';
 
+
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const LOGO_URL = "/images/holy-laundry-logo.png";

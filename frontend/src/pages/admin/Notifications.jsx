@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
   Bell, ArrowLeft, Trash2, CheckCircle,
   Clock, Phone, MessageSquare, LogOut,
   Search, RefreshCw
 } from 'lucide-react';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const LOGO_URL = "/images/holy-laundry-logo.png";
 
