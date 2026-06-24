@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+venv/
+.Python
+
+# Python / Backend
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+
+# Environment Variables
+.env
+.env.*
+!.env.example
+
+# Build Outputs / Frontend
+dist/
+build/
+
+# Logs
+*.log
+whatsapp_log.json
+whatsapp_logs.json
+
+# OS & IDEs
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
