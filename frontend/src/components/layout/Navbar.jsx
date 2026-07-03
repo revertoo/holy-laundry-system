@@ -81,16 +81,26 @@ export default function Navbar() {
                     {/* Desktop Navigation */}
                     <div className="hidden md:flex items-center space-x-8">
                         {navLinks.map((link) => (
-                            <Link
-                                key={link.path}
-                                to={link.path}
-                                className={`text-sm font-medium transition-colors duration-200 ${isActive(link.path)
-                                    ? 'text-primary-500'
-                                    : 'text-gray-700 hover:text-primary-500'
-                                    }`}
-                            >
-                                {link.name}
-                            </Link>
+                            link.path.startsWith('/#') ? (
+                                <a
+                                    key={link.path}
+                                    href={link.path}
+                                    className="text-sm font-medium transition-colors duration-200 text-gray-700 hover:text-primary-500"
+                                >
+                                    {link.name}
+                                </a>
+                            ) : (
+                                <Link
+                                    key={link.path}
+                                    to={link.path}
+                                    className={`text-sm font-medium transition-colors duration-200 ${isActive(link.path)
+                                        ? 'text-primary-500'
+                                        : 'text-gray-700 hover:text-primary-500'
+                                        }`}
+                                >
+                                    {link.name}
+                                </Link>
+                            )
                         ))}
                     </div>
 
@@ -150,17 +160,28 @@ export default function Navbar() {
                 <div className="md:hidden bg-white border-t border-gray-100 shadow-lg">
                     <div className="px-4 py-4 space-y-2">
                         {navLinks.map((link) => (
-                            <Link
-                                key={link.path}
-                                to={link.path}
-                                onClick={() => setIsOpen(false)}
-                                className={`block px-4 py-3 rounded-xl text-sm font-medium transition-colors ${isActive(link.path)
-                                    ? 'bg-primary-50 text-primary-500'
-                                    : 'text-gray-700 hover:bg-gray-50'
-                                    }`}
-                            >
-                                {link.name}
-                            </Link>
+                            link.path.startsWith('/#') ? (
+                                <a
+                                    key={link.path}
+                                    href={link.path}
+                                    onClick={() => setIsOpen(false)}
+                                    className="block px-4 py-3 rounded-xl text-sm font-medium transition-colors text-gray-700 hover:bg-gray-50"
+                                >
+                                    {link.name}
+                                </a>
+                            ) : (
+                                <Link
+                                    key={link.path}
+                                    to={link.path}
+                                    onClick={() => setIsOpen(false)}
+                                    className={`block px-4 py-3 rounded-xl text-sm font-medium transition-colors ${isActive(link.path)
+                                        ? 'bg-primary-50 text-primary-500'
+                                        : 'text-gray-700 hover:bg-gray-50'
+                                        }`}
+                                >
+                                    {link.name}
+                                </Link>
+                            )
                         ))}
 
                         <div className="pt-3 border-t border-gray-100">
