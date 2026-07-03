@@ -369,7 +369,7 @@ export default function Landing() {
                                 </li>
                                 <li className="flex items-center gap-3">
                                     <Phone className="w-4 h-4 text-primary-400" />
-                                    <span className="text-gray-400 text-sm">+62 821-4652-7698</span>
+                                    <span className="text-gray-400 text-sm">+62 878-1865-4657</span>
                                 </li>
                                 <li className="flex items-center gap-3">
                                     <Mail className="w-4 h-4 text-primary-400" />

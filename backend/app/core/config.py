@@ -9,9 +9,11 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str
 
-    # WhatsApp - Mock Mode
+    # WhatsApp - Wablas Integration
     WA_ENABLED: bool = False
-    
+    WABLAS_DOMAIN: str = ""
+    WABLAS_API_TOKEN: str = ""    
+    WABLAS_SECRET_KEY: str = ""
     # JWT
     SECRET_KEY: str
     ALGORITHM: str = "HS256"

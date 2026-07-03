@@ -194,17 +194,7 @@ export default function Notifications() {
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
-        {/* Info Banner */}
-        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-2xl flex items-start gap-3">
-          <Bell className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
-          <div className="text-sm text-blue-800">
-            <p className="font-semibold mb-1">Mode Development - Log Notifikasi</p>
-            <p className="text-blue-600">
-              WhatsApp automation dinonaktifkan sementara. Semua pesan tersimpan di sini.
-              Klik <strong>"Buka WhatsApp"</strong> untuk kirim manual, lalu tandai sebagai terkirim.
-            </p>
-          </div>
-        </div>
+
 
         {/* Stats Cards */}
         <div className="grid grid-cols-3 gap-4 mb-6">
@@ -392,37 +382,7 @@ export default function Notifications() {
                   </div>
 
                   {/* Actions */}
-                  <div className="px-5 pb-5 flex flex-wrap gap-2">
-                    {/* Buka WhatsApp */}
-                    <button
-                      onClick={() => handleOpenWhatsApp(log.phone, log.message)}
-                      className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl text-sm font-medium transition-all"
-                    >
-                      <Phone className="w-4 h-4" />
-                      Buka WhatsApp
-                    </button>
-
-                    {/* Copy */}
-                    <button
-                      onClick={() => handleCopyMessage(log.message)}
-                      className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm font-medium transition-all border border-gray-200"
-                    >
-                      <MessageSquare className="w-4 h-4" />
-                      Copy Pesan
-                    </button>
-
-                    {/* Mark as Sent */}
-                    {isPending && (
-                      <button
-                        onClick={() => handleMarkSent(logId)}
-                        disabled={actionLoading === logId}
-                        className="flex items-center gap-2 px-4 py-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-700 rounded-xl text-sm font-medium transition-all border border-yellow-200 disabled:opacity-50"
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                        {actionLoading === logId ? 'Loading...' : 'Tandai Terkirim'}
-                      </button>
-                    )}
-
+                  <div className="px-5 pb-5 flex flex-wrap gap-2 justify-end">
                     {/* Delete */}
                     <button
                       onClick={() => handleDeleteLog(logId)}
@@ -430,7 +390,7 @@ export default function Notifications() {
                       className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-sm font-medium transition-all border border-red-200 disabled:opacity-50"
                     >
                       <Trash2 className="w-4 h-4" />
-                      Hapus
+                      Hapus Log
                     </button>
                   </div>
                 </div>

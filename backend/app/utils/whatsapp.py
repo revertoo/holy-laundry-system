@@ -1,5 +1,6 @@
 import json
 import os
+import httpx
 from datetime import datetime
 from ..core.config import settings
 
@@ -22,7 +23,7 @@ def _save_logs(logs: list):
     except Exception as e:
         print(f"❌ Error saving logs: {e}")
 
-def _save_to_log(phone_number: str, message: str, message_type: str = "general"):
+def _save_to_log(phone_number: str, message: str, message_type: str = "general", status: str = "pending_manual_send"):
     """Simpan pesan ke file log untuk review manual"""
     try:
         logs = _load_logs()
@@ -33,15 +34,15 @@ def _save_to_log(phone_number: str, message: str, message_type: str = "general")
             "phone": phone_number,
             "message": message,
             "message_type": message_type,
-            "status": "pending_manual_send",
-            "sent_at": None
+            "status": status,
+            "sent_at": datetime.now().isoformat() if status == "sent_auto" else None
         }
 
         logs.append(log_entry)
         _save_logs(logs)
 
         print(f"\n{'='*60}")
-        print(f"📝 [MOCK] WhatsApp Log Saved")
+        print(f"📝 [WhatsApp Log] Status: {status}")
         print(f"📱 To: {phone_number}")
         print(f"📋 Type: {message_type}")
         print(f"💬 Preview: {message[:80]}...")
@@ -56,21 +57,8 @@ async def send_whatsapp_notification(
     message_type: str = "general"
 ):
     """
-    Send WhatsApp notification.
-    
-    Saat ini MOCK MODE - semua pesan disimpan ke log.
-    Admin dapat kirim manual via Dashboard → Notifikasi WhatsApp.
-    
-    Args:
-        phone_number: Nomor HP customer (format: 628xxx atau 08xxx)
-        message: Isi pesan WhatsApp
-        message_type: Tipe pesan (order_created, status_update, payment, dll)
-    
-    Returns:
-        bool: True (always, karena mock mode)
+    Send WhatsApp notification using Wablas API or Mock to logs.
     """
-
-    # Validasi nomor
     if not phone_number or phone_number.strip() == "":
         print("❌ WhatsApp: Empty phone number, skipping")
         return False
@@ -82,9 +70,55 @@ async def send_whatsapp_notification(
     if not phone.startswith('62'):
         phone = '62' + phone
     
-    # MOCK MODE - Selalu log
-    _save_to_log(phone, message, message_type)
-    return True
+    if not settings.WA_ENABLED:
+        # MOCK MODE
+        _save_to_log(phone, message, message_type, status="pending_manual_send")
+        return True
+
+    # WABLAS MODE
+    domain = settings.WABLAS_DOMAIN
+    token = settings.WABLAS_API_TOKEN
+    secret = getattr(settings, 'WABLAS_SECRET_KEY', None)
+    
+    if not domain or not token:
+        print("❌ WhatsApp: Wablas credentials missing, falling back to mock")
+        _save_to_log(phone, message, message_type, status="error_missing_creds")
+        return False
+
+    url = f"https://{domain}/api/send-message"
+    # Wablas uses token.secret in Authorization header for some v2 servers
+    auth_header = f"{token}.{secret}" if secret else token
+    
+    headers = {
+        "Authorization": auth_header,
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "phone": phone,
+        "message": message,
+        "isGroup": "false"
+    }
+    
+    if secret:
+        payload["secret"] = secret
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.post(url, headers=headers, json=payload)
+            
+            if response.status_code == 200:
+                print("✅ WhatsApp: Successfully sent via Wablas")
+                _save_to_log(phone, message, message_type, status="sent_auto")
+                return True
+            else:
+                print(f"❌ WhatsApp: Wablas API Error: {response.status_code} - {response.text}")
+                _save_to_log(phone, message, message_type, status="error_wablas_api")
+                return False
+    except Exception as e:
+        print(f"❌ WhatsApp: Failed to connect to Wablas: {e}")
+        _save_to_log(phone, message, message_type, status="error_connection")
+        return False
 
 # =============================================
 # MESSAGE TEMPLATES
@@ -129,7 +163,8 @@ Pesanan Anda telah diterima! ✅
 
 Terima kasih telah menggunakan Holy Laundry! 🙏
 
-_Balas pesan ini jika ada pertanyaan._"""
+🌐 *Cek Status:* https://holy-laundry-system.vercel.app
+_(Pesan otomatis dari sistem)_"""
 
     return await send_whatsapp_notification(
         phone, message, "order_created"
@@ -164,7 +199,8 @@ Anda dapat membayar sekarang atau saat mengambil cucian.
 
 Terima kasih! 🙏
 
-_Balas pesan ini jika ada pertanyaan._"""
+🌐 *Cek Status:* https://holy-laundry-system.vercel.app
+_(Pesan otomatis dari sistem)_"""
 
     return await send_whatsapp_notification(
         phone, message, "order_weighed"
@@ -218,7 +254,8 @@ Silakan ambil cucian Anda di Holy Laundry.
     message += """
 Terima kasih! 🙏
 
-_Balas pesan ini jika ada pertanyaan._"""
+🌐 *Cek Status:* https://holy-laundry-system.vercel.app
+_(Pesan otomatis dari sistem)_"""
     
     return await send_whatsapp_notification(
         phone, message, "status_update"
@@ -247,7 +284,8 @@ Status: *{payment_data['order_status']}*
 
 Terima kasih atas pembayarannya! 🙏
 
-_Balas pesan ini jika ada pertanyaan._"""
+🌐 *Cek Status:* https://holy-laundry-system.vercel.app
+_(Pesan otomatis dari sistem)_"""
     
     return await send_whatsapp_notification(
         phone, message, "payment_success"

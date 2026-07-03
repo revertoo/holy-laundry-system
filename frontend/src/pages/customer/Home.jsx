@@ -200,7 +200,7 @@ export default function CustomerHome() {
                 <div className="bg-primary-50 border border-primary-100 rounded-3xl p-5">
                     <h3 className="font-bold text-gray-900 mb-3">📍 Lokasi Toko</h3>
                     <p className="text-sm text-gray-600 mb-1">Jl. Soka No. 12, Kapal, Mengwi, Bali</p>
-                    <p className="text-sm text-gray-600 mb-3">📞 +62 821-4652-7698</p>
+                    <p className="text-sm text-gray-600 mb-3">📞 +62 878-1865-4657</p>
                     <div className="text-xs text-gray-500 space-y-1">
                         <p>⏰ <span className="font-medium">Senin - Jumat:</span> 08.00 - 18.00 WITA</p>
                         <p>⏰ <span className="font-medium">Sabtu:</span> 08.00 - 16.00 WITA</p>
