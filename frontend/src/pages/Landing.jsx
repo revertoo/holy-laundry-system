@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import {
     ArrowRight, Sparkles, Clock, Shield,
     Star, MapPin, Phone, Mail,
-    Instagram, Facebook, CheckCircle
+    Instagram, Facebook, CheckCircle, MessageCircle
 } from 'lucide-react';
 
 const LOGO_URL = "/images/logo-holy-laundry-no-background.png";
@@ -398,6 +398,9 @@ export default function Landing() {
                                 </li>
                             </ul>
                             <div className="flex gap-3 mt-6">
+                                <a href="https://wa.me/6287818654657" target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-green-500 transition-colors" title="Chat WhatsApp">
+                                    <MessageCircle className="w-4 h-4" />
+                                </a>
                                 <a href="#" className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-primary-500 transition-colors">
                                     <Instagram className="w-4 h-4" />
                                 </a>
