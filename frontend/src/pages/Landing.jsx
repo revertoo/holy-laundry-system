@@ -52,7 +52,7 @@ const testimonials = [
 ];
 
 const serviceAreas = [
-    "Kapal", "Tangeb", "Lukluk", "Cica"
+    "Kapal", "Tangeb", "Lukluk", "Mengwitani"
 ];
 
 export default function Landing() {
@@ -259,7 +259,9 @@ export default function Landing() {
                                 </div>
                                 <p className="text-gray-700 italic">"{t.comment}"</p>
                                 <div className="flex items-center gap-4 pt-4 border-t border-gray-100">
-                                    <img src={t.avatar} alt={t.name} className="w-12 h-12 rounded-full object-cover" />
+                                    <div className="w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-bold text-lg">
+                                        {t.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
+                                    </div>
                                     <div>
                                         <p className="font-bold text-gray-900">{t.name}</p>
                                         <p className="text-sm text-gray-500">{t.location}</p>
