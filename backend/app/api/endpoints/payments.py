@@ -38,6 +38,19 @@ async def create_payment_token(order_id: str):
         )
     
     try:
+        # Check if pending payment token already exists
+        existing_payment = await db.payments.find_one({
+            "order_id": str(order['_id']),
+            "status": "pending"
+        })
+        
+        if existing_payment and existing_payment.get('snap_token'):
+            return {
+                "snap_token": existing_payment['snap_token'],
+                "order_number": order['order_number'],
+                "amount": order['total_harga']
+            }
+
         # Create Snap token
         snap_token = create_snap_token(
             order_id=order['order_number'],
