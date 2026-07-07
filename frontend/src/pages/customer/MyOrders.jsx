@@ -78,6 +78,35 @@ export default function MyOrders() {
     if (userData) loadOrders(userData._id);
   }, []);
 
+  // Fallback: Check URL for Midtrans redirect parameters
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const transactionStatus = urlParams.get('transaction_status');
+    const orderNumber = urlParams.get('order_id');
+
+    if ((transactionStatus === 'settlement' || transactionStatus === 'capture') && orderNumber && orders.length > 0) {
+      const targetOrder = orders.find(o => o.order_number === orderNumber);
+      
+      if (targetOrder && targetOrder.payment_status !== 'paid') {
+        const token = localStorage.getItem('access_token');
+        axios.put(
+          `${API_URL}/api/orders/${targetOrder._id}/payment-status`,
+          { payment_status: 'paid' },
+          { headers: { Authorization: `Bearer ${token}` } }
+        )
+        .then(() => {
+          // Clean the URL so it doesn't trigger again on refresh
+          window.history.replaceState(null, '', window.location.pathname);
+          loadOrders(user._id);
+        })
+        .catch(err => console.error("Error updating payment status from URL:", err));
+      } else if (targetOrder && targetOrder.payment_status === 'paid') {
+        // Clean URL if already paid
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+    }
+  }, [orders, user]);
+
   const loadOrders = async (customerId) => {
     try {
       const token = localStorage.getItem('access_token');
