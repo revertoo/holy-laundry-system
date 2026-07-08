@@ -1,9 +1,13 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 from datetime import datetime
 from ...core.database import get_database
 from ...utils.midtrans import create_snap_token
 from bson import ObjectId
 import pytz
+import hashlib
+from ...core.config import settings
+from ...utils.whatsapp import notify_payment_success
+from ..deps import get_current_user
 
 router = APIRouter()
 
@@ -98,6 +102,20 @@ async def payment_notification(notification: dict):
     order_id = notification.get('order_id')
     transaction_status = notification.get('transaction_status')
     fraud_status = notification.get('fraud_status', 'accept')
+    status_code = notification.get('status_code')
+    gross_amount = notification.get('gross_amount')
+    signature_key = notification.get('signature_key')
+    
+    # Validasi Midtrans Signature
+    if signature_key:
+        data_to_hash = f"{order_id}{status_code}{gross_amount}{settings.MIDTRANS_SERVER_KEY}"
+        calculated_signature = hashlib.sha512(data_to_hash.encode()).hexdigest()
+        
+        if calculated_signature != signature_key:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Invalid signature key"
+            )
     
     # Find order by order_number
     order = await db.orders.find_one({"order_number": order_id})
@@ -139,10 +157,42 @@ async def payment_notification(notification: dict):
         }
     )
     
+    # Send WhatsApp notification if paid
+    if payment_status == 'paid' and order.get('payment_status') != 'paid':
+        try:
+            customer = await db.users.find_one({"_id": ObjectId(order['customer_id'])})
+            
+            if customer and order.get('total_harga'):
+                now_indonesia = datetime.now(INDONESIA_TZ)
+
+                status_text_map = {
+                    "pending_weight": "Menunggu Ditimbang",
+                    "received": "Diterima",
+                    "washing": "Sedang Dicuci",
+                    "drying": "Sedang Dikeringkan",
+                    "ironing": "Sedang Disetrika",
+                    "ready": "Sudah Selesai"
+                }
+
+                await notify_payment_success(
+                    customer_name=customer['nama'],
+                    phone=customer['no_hp'],
+                    payment_data={
+                        'order_number': order['order_number'],
+                        'amount': order['total_harga'],
+                        'method': notification.get('payment_type', 'Midtrans'),
+                        'waktu': now_indonesia.strftime('%d %B %Y, %H:%M'),
+                        'order_status': status_text_map.get(order['status_cucian'], 'Diproses')
+                    }
+                )
+
+        except Exception as e:
+            print(f"❌ Error sending payment notification: {str(e)}")
+
     return {"status": "success", "message": "Payment status updated"}
 
 @router.get("/history/{customer_id}")
-async def get_payment_history(customer_id: str):
+async def get_payment_history(customer_id: str, current_user: dict = Depends(get_current_user)):
     """Get payment history for a customer"""
     db = await get_database()
     

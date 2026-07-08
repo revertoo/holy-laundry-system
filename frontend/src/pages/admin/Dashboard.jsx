@@ -28,6 +28,19 @@ const STATUS_CONFIG = {
   ready:          { label: '✅ Selesai',             bg: 'bg-green-100',  text: 'text-green-700'  },
 };
 
+const STATUS_BUTTONS_MAP = {
+  cuci_setrika: [
+    { label: '🧼 Dicuci', value: 'washing' },
+    { label: '💨 Kering', value: 'drying' },
+    { label: '👔 Setrika', value: 'ironing' },
+    { label: '✅ Selesai', value: 'ready' },
+  ],
+  setrika_saja: [
+    { label: '👔 Setrika', value: 'ironing' },
+    { label: '✅ Selesai', value: 'ready' },
+  ]
+};
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
@@ -664,12 +677,7 @@ export default function Dashboard() {
                     </span>
                   </p>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    {[
-                      { label: '🧼 Dicuci', value: 'washing' },
-                      { label: '💨 Kering', value: 'drying' },
-                      { label: '👔 Setrika', value: 'ironing' },
-                      { label: '✅ Selesai', value: 'ready' },
-                    ].map((s) => (
+                    {(STATUS_BUTTONS_MAP[selectedOrder.service_type] || STATUS_BUTTONS_MAP.cuci_setrika).map((s) => (
                       <button
                         key={s.value}
                         onClick={() => handleUpdateStatus(selectedOrder._id, s.value)}

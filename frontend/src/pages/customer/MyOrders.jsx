@@ -63,7 +63,20 @@ const STATUS_CONFIG = {
   },
 };
 
-const STEPS = ['Timbang', 'Terima', 'Cuci', 'Kering', 'Setrika', 'Selesai'];
+const STEPS_MAP = {
+  cuci_setrika: [
+    { key: 'received', label: 'Terima' },
+    { key: 'washing', label: 'Cuci' },
+    { key: 'drying', label: 'Kering' },
+    { key: 'ironing', label: 'Setrika' },
+    { key: 'ready', label: 'Selesai' }
+  ],
+  setrika_saja: [
+    { key: 'received', label: 'Terima' },
+    { key: 'ironing', label: 'Setrika' },
+    { key: 'ready', label: 'Selesai' }
+  ]
+};
 
 export default function MyOrders() {
   const navigate = useNavigate();
@@ -78,34 +91,17 @@ export default function MyOrders() {
     if (userData) loadOrders(userData._id);
   }, []);
 
-  // Fallback: Check URL for Midtrans redirect parameters
+  // Clean URL if Midtrans redirects back
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const transactionStatus = urlParams.get('transaction_status');
-    const orderNumber = urlParams.get('order_id');
-
-    if ((transactionStatus === 'settlement' || transactionStatus === 'capture') && orderNumber && orders.length > 0) {
-      const targetOrder = orders.find(o => o.order_number === orderNumber);
-      
-      if (targetOrder && targetOrder.payment_status !== 'paid') {
-        const token = localStorage.getItem('access_token');
-        axios.put(
-          `${API_URL}/api/orders/${targetOrder._id}/payment-status`,
-          { payment_status: 'paid' },
-          { headers: { Authorization: `Bearer ${token}` } }
-        )
-        .then(() => {
-          // Clean the URL so it doesn't trigger again on refresh
-          window.history.replaceState(null, '', window.location.pathname);
-          loadOrders(user._id);
-        })
-        .catch(err => console.error("Error updating payment status from URL:", err));
-      } else if (targetOrder && targetOrder.payment_status === 'paid') {
-        // Clean URL if already paid
-        window.history.replaceState(null, '', window.location.pathname);
+    if (urlParams.get('transaction_status') || urlParams.get('order_id')) {
+      window.history.replaceState(null, '', window.location.pathname);
+      if (user) {
+        // Wait a bit for webhook to arrive then reload
+        setTimeout(() => loadOrders(user._id), 1500);
       }
     }
-  }, [orders, user]);
+  }, [user]);
 
   const loadOrders = async (customerId) => {
     try {
@@ -129,18 +125,8 @@ export default function MyOrders() {
       paymentService.openMidtransSnap(
         paymentData.snap_token,
         async () => {
-          try {
-            const token = localStorage.getItem('access_token');
-            await axios.put(
-              `${API_URL}/api/orders/${order._id}/payment-status`,
-              { payment_status: 'paid' },
-              { headers: { Authorization: `Bearer ${token}` } }
-            );
-            alert('✅ Pembayaran berhasil!');
-            await loadOrders(user._id);
-          } catch (err) {
-            alert('✅ Pembayaran berhasil! Silakan refresh halaman.');
-          }
+          alert('✅ Pembayaran sedang diproses! Sistem akan memperbarui status dalam beberapa saat.');
+          setTimeout(() => loadOrders(user._id), 2000); // Tunggu webhook Midtrans sedikit
         },
         () => alert('⏳ Pembayaran pending. Selesaikan pembayaran Anda.'),
         () => alert('❌ Pembayaran gagal. Silakan coba lagi.')
@@ -239,53 +225,41 @@ export default function MyOrders() {
                   {order.status_cucian !== 'pending_weight' && (
                     <div className="px-6 pb-7">
                       {(() => {
-                        const stepsList = STEPS.slice(1);
-                        const totalSteps = stepsList.length; // Contoh: 5
+                        const orderSteps = STEPS_MAP[order.service_type] || STEPS_MAP.cuci_setrika;
+                        const totalSteps = orderSteps.length;
+                        
+                        let computedCurrentStep = orderSteps.findIndex(s => s.key === order.status_cucian) + 1;
+                        if (computedCurrentStep === 0 && order.status_cucian === 'ready') computedCurrentStep = totalSteps;
 
-                        // Karena item menggunakan flex: 1, setiap step mengambil porsi rata.
-                        // Titik tengah step pertama dan terakhir ada di setengah porsi tersebut.
                         const halfStepPercent = 100 / (totalSteps * 2);
-
                         let progressPercentage = 0;
 
-                        if (currentStep >= totalSteps) {
-                          // Jika sudah selesai sepenuhnya (Gambar Bawah)
+                        if (computedCurrentStep >= totalSteps) {
                           progressPercentage = 100;
-                        } else if (currentStep > 1) {
-                          // Jika sedang berjalan (Gambar Atas)
-                          // Tambah 0.5 segment agar garis berhenti pas di tengah-tengah antar lingkaran
-                          progressPercentage = ((currentStep - 1 + 0.5) / (totalSteps - 1)) * 100;
+                        } else if (computedCurrentStep > 1) {
+                          progressPercentage = ((computedCurrentStep - 1 + 0.5) / (totalSteps - 1)) * 100;
                         }
 
                         return (
                           <div className="relative flex items-start justify-between">
-
-                            {/* Wrapper Garis Connector (Sejajar presisi dari tengah ke tengah) */}
                             <div
                               className="absolute top-4 h-1"
-                              style={{
-                                left: `${halfStepPercent}%`,
-                                right: `${halfStepPercent}%`
-                              }}
+                              style={{ left: `${halfStepPercent}%`, right: `${halfStepPercent}%` }}
                             >
-                              {/* Garis Dasar Abu-abu (Background) */}
                               <div className="absolute inset-0 bg-gray-100 rounded-full" />
-
-                              {/* Garis Progress Biru */}
                               <div
                                 className="absolute top-0 left-0 h-full bg-primary-500 rounded-full transition-all duration-500"
                                 style={{ width: `${progressPercentage}%` }}
                               />
                             </div>
 
-                            {stepsList.map((step, i) => {
+                            {orderSteps.map((stepObj, i) => {
                               const stepNum = i + 1;
-                              const isCompleted = currentStep > stepNum;
-                              const isCurrent = currentStep === stepNum;
+                              const isCompleted = computedCurrentStep > stepNum;
+                              const isCurrent = computedCurrentStep === stepNum;
 
                               return (
                                 <div key={i} className="flex flex-col items-center z-10" style={{ flex: 1 }}>
-                                  {/* Circle */}
                                   <div className="relative w-full flex justify-center">
                                     <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all duration-300 ${isCompleted
                                       ? 'bg-primary-500 border-primary-500 text-white shadow-md'
@@ -302,11 +276,8 @@ export default function MyOrders() {
                                       )}
                                     </div>
                                   </div>
-
-                                  {/* Label */}
-                                  <span className={`mt-2 text-xs font-medium text-center leading-tight ${isCompleted || isCurrent ? 'text-primary-600' : 'text-gray-400'
-                                    }`}>
-                                    {step}
+                                  <span className={`mt-2 text-xs font-medium text-center leading-tight ${isCompleted || isCurrent ? 'text-primary-600' : 'text-gray-400'}`}>
+                                    {stepObj.label}
                                   </span>
                                 </div>
                               );

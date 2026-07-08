@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 from datetime import datetime, timedelta
 import pytz
 from typing import List
@@ -6,6 +6,7 @@ from ...schemas.order import OrderCreate, OrderResponse, OrderUpdateStatus, Orde
 from ...core.database import get_database
 from ...utils.whatsapp import notify_order_created, notify_order_weighed, notify_status_update, notify_payment_success
 from bson import ObjectId
+from ..deps import get_current_user
 
 router = APIRouter()
 
@@ -23,7 +24,7 @@ def get_indonesia_time():
     return datetime.now(INDONESIA_TZ)
 
 @router.post("/", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
-async def create_order(order: OrderCreate):
+async def create_order(order: OrderCreate, current_user: dict = Depends(get_current_user)):
     db = await get_database()
     
     try:
@@ -116,7 +117,7 @@ async def create_order(order: OrderCreate):
         )
 
 @router.put("/{order_id}/weight", response_model=OrderResponse)
-async def update_order_weight(order_id: str, weight_update: OrderUpdateWeight):
+async def update_order_weight(order_id: str, weight_update: OrderUpdateWeight, current_user: dict = Depends(get_current_user)):
     db = await get_database()
 
     order = await db.orders.find_one({"_id": ObjectId(order_id)})
@@ -184,7 +185,7 @@ async def update_order_weight(order_id: str, weight_update: OrderUpdateWeight):
     return order
 
 @router.get("/", response_model=List[OrderResponse])
-async def get_all_orders():
+async def get_all_orders(current_user: dict = Depends(get_current_user)):
     db = await get_database()
     orders = await db.orders.find().sort("tanggal_masuk", -1).to_list(100)
     
@@ -194,7 +195,7 @@ async def get_all_orders():
     return orders
 
 @router.get("/customer/{customer_id}", response_model=List[OrderResponse])
-async def get_customer_orders(customer_id: str):
+async def get_customer_orders(customer_id: str, current_user: dict = Depends(get_current_user)):
     db = await get_database()
     orders = await db.orders.find({"customer_id": customer_id}).sort("tanggal_masuk", -1).to_list(100)
     
@@ -204,7 +205,7 @@ async def get_customer_orders(customer_id: str):
     return orders
 
 @router.get("/{order_id}", response_model=OrderResponse)
-async def get_order(order_id: str):
+async def get_order(order_id: str, current_user: dict = Depends(get_current_user)):
     db = await get_database()
     order = await db.orders.find_one({"_id": ObjectId(order_id)})
     
@@ -218,7 +219,7 @@ async def get_order(order_id: str):
     return order
 
 @router.put("/{order_id}/status", response_model=OrderResponse)
-async def update_order_status(order_id: str, status_update: OrderUpdateStatus):
+async def update_order_status(order_id: str, status_update: OrderUpdateStatus, current_user: dict = Depends(get_current_user)):
     db = await get_database()
     
     # Validasi status
@@ -267,7 +268,7 @@ async def update_order_status(order_id: str, status_update: OrderUpdateStatus):
     return order
 
 @router.delete("/{order_id}")
-async def delete_order(order_id: str):
+async def delete_order(order_id: str, current_user: dict = Depends(get_current_user)):
     db = await get_database()
     
     result = await db.orders.delete_one({"_id": ObjectId(order_id)})
@@ -279,70 +280,4 @@ async def delete_order(order_id: str):
         )
     
     return {"message": "Pesanan berhasil dihapus"}
-
-@router.put("/{order_id}/payment-status")
-async def update_payment_status(order_id: str, payment_data: dict):
-    """"Update payment status manually"""
-    db = await get_database()
-
-    payment_status = payment_data.get('payment_status', 'pending')
-
-    # Validasi payment status
-    if payment_status not in ['pending', 'paid', 'failed']:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Status pembayaran tidak valid"
-        )
-    
-    # Update order
-    result = await db.orders.update_one(
-        {"_id": ObjectId(order_id)},
-        {"$set": {"payment_status": payment_status}}
-    )
-
-    if result.modified_count == 0:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Pesanan tidak ditemukan"
-        )
-    
-    # Update payment record
-    await db.payments.update_one(
-        {"order_id": order_id},
-        {"$set": {"status": payment_status}}
-    )
-
-    # Send WhatsApp notification if paid
-    if payment_status == 'paid':
-        try:
-            order = await db.orders.find_one({"_id": ObjectId(order_id)})
-            customer = await db.users.find_one({"_id": ObjectId(order['customer_id'])})
-            
-            if customer and order.get('total_harga'):
-                now_indonesia = get_indonesia_time()
-
-                status_text_map = {
-                    "pending_weight": "Menunggu Ditimbang",
-                    "received": "Diterima",
-                    "washing": "Sedang Dicuci",
-                    "drying": "Sedang Dikeringkan",
-                    "ironing": "Sedang Disetrika",
-                    "ready": "Sudah Selesai"
-                }
-
-                await notify_payment_success(
-                    customer_name=customer['nama'],
-                    phone=customer['no_hp'],
-                    payment_data={
-                        'order_number': order['order_number'],
-                        'amount': order['total_harga'],
-                        'method': 'Midtrans',
-                        'waktu': now_indonesia.strftime('%d %B %Y, %H:%M'),
-                        'order_status': status_text_map.get(order['status_cucian'], 'Diproses')
-                    }
-                )
-
-        except Exception as e:
-            print(f"❌ Error sending payment notification: {str(e)}")
-
-    return {"message": "Status pembayaran berhasil diupdate"}
+
